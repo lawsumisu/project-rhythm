@@ -35,6 +35,7 @@ class Scene extends Phaser.Scene {
         16
       );
     });
+    this.debugDraw.rect({ x: 50, y: 100, width: 60, height: 60 }, { fill: { color: this.fillColor }, lineWidth: 3 });
     this.debugDraw.circle({ x: 50, y: 50, r: 15 }, { fill: { color: this.fillColor } });
   }
 

@@ -52,4 +52,7 @@ module.exports = {
       test: /\.(ts|js)($|\?)/i,
     }),
   ],
+  watchOptions: {
+    ignored: /node_modules([\\]+|\/)+(?!@lawsumisu)/,
+  },
 };
