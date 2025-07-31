@@ -13,7 +13,8 @@
     "@lawsumisu/common-utilities": "^0.6.2",
     "@lawsumisu/phaser": "^0.2.1",
     "lodash": "^4.17.21",
-    "phaser": "^3.90.0"
+    "phaser": "^3.90.0",
+    "tone": "^15.1.22"
   },
   "devDependencies": {
     "@babel/cli": "^7.27.2",
