@@ -1,6 +1,6 @@
 import { DebugDrawPlugin } from '@lawsumisu/phaser';
 import * as Phaser from 'phaser';
-import { Conductor, Metronome } from 'src/conductor';
+import { Metronome } from 'src/conductor';
 import * as Tone from 'tone';
 import { Vector2 } from '@lawsumisu/common-utilities';
 
@@ -8,7 +8,6 @@ const keyCodes = Phaser.Input.Keyboard.KeyCodes;
 type PhaserSound = Phaser.Sound.HTML5AudioSound | Phaser.Sound.NoAudioSound | Phaser.Sound.WebAudioSound;
 
 class Scene extends Phaser.Scene {
-  private conductor: Conductor;
   private fillColor: number[] = [1, 1, 1];
   private lastPress = -1;
   private metronome: Metronome;
@@ -22,10 +21,7 @@ class Scene extends Phaser.Scene {
   public create(): void {
     const music = this.sound.add('theme');
     const bpm = 133;
-    this.conductor = new Conductor(music, bpm, 0);
     this.metronome = new Metronome(bpm);
-    // transport.start();
-    this.metronome.start();
     Tone.getContext().lookAhead = 0;
 
     this.input.on('pointerup', () => {
@@ -41,6 +37,7 @@ class Scene extends Phaser.Scene {
   }
 
   public update(): void {
+    const sound = this.sound.get<PhaserSound>('theme');
     const {
       [keyCodes.A]: A,
       [keyCodes.ENTER]: ENTER,
@@ -51,23 +48,24 @@ class Scene extends Phaser.Scene {
     const FPS = 60;
     const initialTimer = (FPS * 60) / bpm;
     if (A.isDown) {
-      this.conductor.sound.play();
-      this.conductor.reset();
+      sound.play();
+      this.metronome.start(() => sound.seek);
     }
-    this.conductor.update(() => {
-      this.fillColor = [0, 0.5, 1];
-    });
-    this.metronome.update((beatIndex) => {
-      this.beats.push({
-        position: new Vector2(350, 50),
-        timer: initialTimer,
-        state: beatIndex % 4 === 1 ? '' : 'pass',
+    sound.isPlaying &&
+      this.metronome.update((beatIndex) => {
+        this.fillColor = [0, 0.5, 1];
+        if (beatIndex >= 4) {
+          this.beats.push({
+            position: new Vector2(350, 50),
+            timer: initialTimer,
+            // state: beatIndex % 4 === 1 ? '' : 'pass',
+          });
+        }
+        // this.synth.triggerAttackRelease('C2', '16n');
       });
-      // this.synth.triggerAttackRelease('C2', '16n');
-    });
     if (Phaser.Input.Keyboard.JustDown(ENTER) && this.lastPress === -1 && this.beats.length >= 2) {
       // this.lastPress = this.sound.get<PhaserSound>('theme').seek;
-      const offset = this.metronome.getOffsetFromClosestBeat(Date.now() / 1000);
+      const offset = this.metronome.getOffsetFromClosestBeat();
       const targetBeat = this.beats
         .filter((beat) => !beat.state)
         .reduce((prev, beat) => {
@@ -85,7 +83,7 @@ class Scene extends Phaser.Scene {
           this.synth.triggerAttackRelease('F2', '16n');
         }
       }
-      console.log(this.metronome.getOffsetFromClosestBeat(Date.now() / 1000));
+      console.log(this.metronome.getOffsetFromClosestBeat());
     }
     const color = parseInt(
       '0x' +
@@ -99,7 +97,9 @@ class Scene extends Phaser.Scene {
       16
     );
     this.beats.forEach((beat, i) => {
-      this.beats[i].timer -= 1;
+      if (sound.isPlaying) {
+        this.beats[i].timer -= 1;
+      }
       let color;
       switch (beat.state) {
         case 'bad':
@@ -135,11 +135,12 @@ class Scene extends Phaser.Scene {
     this.debugDraw.circle({ x: 50, y: 50, r: 15 }, { fill: { color } });
     this.fillColor = this.fillColor.map((i) => Math.max(i - 0.01, 0.01));
 
-    if (Phaser.Input.Keyboard.JustDown(UP)) {
-      this.metronome.bpm += 5;
-    } else if (Phaser.Input.Keyboard.JustDown(DOWN)) {
-      this.metronome.bpm -= 5;
-    }
+    // if (Phaser.Input.Keyboard.JustDown(UP)) {
+    //   this.metronome.bpm += 5;
+    // } else if (Phaser.Input.Keyboard.JustDown(DOWN)) {
+    //   this.metronome.bpm -= 5;
+    // }
+    // sound.rate = this.metronome.bpm / 133;
   }
 
   public get debugDraw(): DebugDrawPlugin {
