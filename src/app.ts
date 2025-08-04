@@ -1,10 +1,10 @@
 import { DebugDrawPlugin } from '@lawsumisu/phaser';
+import { GameInput, GameInputPlugin } from 'src/gameInput.plugin';
 import * as Phaser from 'phaser';
 import { Metronome } from 'src/conductor';
 import * as Tone from 'tone';
 import { Vector2 } from '@lawsumisu/common-utilities';
 
-const keyCodes = Phaser.Input.Keyboard.KeyCodes;
 type PhaserSound = Phaser.Sound.HTML5AudioSound | Phaser.Sound.NoAudioSound | Phaser.Sound.WebAudioSound;
 
 class Scene extends Phaser.Scene {
@@ -19,51 +19,37 @@ class Scene extends Phaser.Scene {
     this.load.audio('theme', 'assets/audio/cryptic_marble.ogg');
   }
   public create(): void {
-    const music = this.sound.add('theme');
+    this.sound.add('theme');
     const bpm = 133;
     this.metronome = new Metronome(bpm);
     Tone.getContext().lookAhead = 0;
-
-    this.input.on('pointerup', () => {
-      if (music.isPlaying) {
-        music.pause();
-      } else {
-        music.resume();
-      }
-    });
-
-    // Keyboard setup
-    [keyCodes.ENTER, keyCodes.A, keyCodes.UP, keyCodes.DOWN].forEach((k: number) => this.input.keyboard!.addKey(k));
   }
 
   public update(): void {
     const sound = this.sound.get<PhaserSound>('theme');
-    const {
-      [keyCodes.A]: A,
-      [keyCodes.ENTER]: ENTER,
-      [keyCodes.DOWN]: DOWN,
-      [keyCodes.UP]: UP,
-    } = this.input.keyboard!.keys;
+    const inputHistory = this.gameInput.for(0);
     const { bpm } = this.metronome;
     const FPS = 60;
     const initialTimer = (FPS * 60) / bpm;
-    if (A.isDown) {
+    if (inputHistory.isInputPressed(GameInput.INPUT3)) {
       sound.play();
       this.metronome.start(() => sound.seek);
+    } else if (inputHistory.isInputPressed(GameInput.INPUT4)) {
+      sound.isPlaying ? sound.pause() : sound.resume();
     }
     sound.isPlaying &&
       this.metronome.update((beatIndex) => {
         this.fillColor = [0, 0.5, 1];
-        if (beatIndex >= 4) {
+        if (beatIndex >= 3) {
           this.beats.push({
             position: new Vector2(350, 50),
             timer: initialTimer,
-            // state: beatIndex % 4 === 1 ? '' : 'pass',
+            state: beatIndex % 4 === 3 ? '' : 'pass',
           });
         }
         // this.synth.triggerAttackRelease('C2', '16n');
       });
-    if (Phaser.Input.Keyboard.JustDown(ENTER) && this.lastPress === -1 && this.beats.length >= 2) {
+    if (inputHistory.isInputPressed(GameInput.INPUT1) && this.lastPress === -1 && this.beats.length >= 2) {
       // this.lastPress = this.sound.get<PhaserSound>('theme').seek;
       const offset = this.metronome.getOffsetFromClosestBeat();
       const targetBeat = this.beats
@@ -142,9 +128,12 @@ class Scene extends Phaser.Scene {
     // }
     // sound.rate = this.metronome.bpm / 133;
   }
-
   public get debugDraw(): DebugDrawPlugin {
     return (<any>this.sys).debugDraw;
+  }
+
+  public get gameInput(): GameInputPlugin {
+    return (<any>this.sys).GI;
   }
 }
 const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -162,8 +151,7 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
   plugins: {
     scene: [
       { key: 'debugDraw', plugin: DebugDrawPlugin, mapping: 'debugDraw' },
-      // { key: 'GI', plugin: GameInputPlugin, mapping: 'GI' },
-      // { key: 'keyboard', plugin: KeyboardPluginPS, mapping: 'keyboard' }
+      { key: 'GI', plugin: GameInputPlugin, mapping: 'GI' },
     ],
   },
 };
